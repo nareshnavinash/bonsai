@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html {
+    background: #0d1117;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  body {
+    width: 1500px;
+    height: 750px;
+    background: #0d1117;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+
+  .logo svg {
+    width: 90px;
+    height: 90px;
+  }
+
+  .title {
+    font-size: 72px;
+    font-weight: 700;
+    color: #e6edf3;
+    letter-spacing: -2px;
+  }
+
+  .tagline {
+    font-size: 28px;
+    color: #8b949e;
+    font-weight: 400;
+    letter-spacing: -0.5px;
+  }
+
+  .divider {
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #10b981, transparent);
+    margin: 8px 0;
+  }
+
+  .stats {
+    display: flex;
+    gap: 48px;
+    margin-top: 12px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #10b981;
+  }
+
+  .stat-label {
+    font-size: 14px;
+    color: #484f58;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Subtle glow behind logo */
+  .logo-glow {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -65%);
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="logo-glow"></div>
+
+<div class="content">
+  <div class="logo-row">
+    <div class="logo">
+      <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="24" y="16" width="14" height="88" rx="7" fill="#10b981"/>
+        <path d="M31 50 C31 50 31 36 56 36 C81 36 96 50 96 68 C96 86 81 100 56 100 C31 100 31 86 31 86" fill="#10b981"/>
+        <ellipse cx="60" cy="68" rx="22" ry="20" fill="#0d1117"/>
+        <rect x="54" y="62" width="12" height="12" rx="1" fill="#10b981"/>
+      </svg>
+    </div>
+    <div class="title">bonsai</div>
+  </div>
+
+  <div class="tagline">Run 1-bit LLMs locally</div>
+
+  <div class="divider"></div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value">14x</div>
+      <div class="stat-label">smaller</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">78x</div>
+      <div class="stat-label">faster</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">1.2 GB</div>
+      <div class="stat-label">for 8B params</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">56ms</div>
+      <div class="stat-label">response</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

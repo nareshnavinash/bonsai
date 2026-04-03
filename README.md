@@ -1,10 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.svg" alt="bonsai" width="120">
-
-# bonsai
-
-**Run prism-ml's 1-bit Bonsai models locally.**
+<img src="assets/banner.png" alt="bonsai — Run 1-bit LLMs locally" width="100%">
 
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
