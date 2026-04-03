@@ -1,20 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
-  <!-- Pot -->
-  <path d="M38 90 L42 105 L78 105 L82 90 Z" fill="#6b7280" opacity="0.8"/>
-  <rect x="35" y="85" width="50" height="7" rx="2" fill="#9ca3af"/>
-  <!-- Trunk -->
-  <path d="M58 85 Q55 70 50 60 Q48 55 52 50" stroke="#a78b6e" stroke-width="4" stroke-linecap="round" fill="none"/>
-  <path d="M62 85 Q65 72 68 65 Q70 60 66 55" stroke="#a78b6e" stroke-width="3" stroke-linecap="round" fill="none"/>
-  <!-- Left branch -->
-  <path d="M50 60 Q42 52 38 48" stroke="#a78b6e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-  <!-- Right branch -->
-  <path d="M66 55 Q72 48 76 45" stroke="#a78b6e" stroke-width="2" stroke-linecap="round" fill="none"/>
-  <!-- Foliage clusters -->
-  <circle cx="52" cy="42" r="14" fill="#10b981" opacity="0.9"/>
-  <circle cx="38" cy="38" r="10" fill="#10b981" opacity="0.8"/>
-  <circle cx="66" cy="38" r="12" fill="#10b981" opacity="0.85"/>
-  <circle cx="76" cy="40" r="8" fill="#10b981" opacity="0.75"/>
-  <circle cx="48" cy="30" r="10" fill="#34d399" opacity="0.7"/>
-  <circle cx="60" cy="28" r="11" fill="#34d399" opacity="0.65"/>
-  <circle cx="55" cy="22" r="8" fill="#6ee7b7" opacity="0.5"/>
+  <!-- Vertical stem -->
+  <rect x="24" y="16" width="14" height="88" rx="7" fill="#10b981"/>
+  <!-- Bowl of the b -->
+  <path d="M31 50 C31 50 31 36 56 36 C81 36 96 50 96 68 C96 86 81 100 56 100 C31 100 31 86 31 86" fill="#10b981"/>
+  <!-- Inner counter -->
+  <ellipse cx="60" cy="68" rx="22" ry="20" fill="#0d1117"/>
+  <!-- Pixel core: 1-bit -->
+  <rect x="54" y="62" width="12" height="12" rx="1" fill="#10b981"/>
 </svg>
