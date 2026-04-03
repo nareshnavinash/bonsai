@@ -97,7 +97,50 @@ bonsai run bonsai-4b "what is quantum computing?"
 | `bonsai cp <src> <dest>` | Copy a model |
 | `bonsai create <name> --from <model>` | Create a model with custom system prompt |
 | `bonsai serve` | Start the Ollama server |
+| `bonsai api` | Start OpenAI-compatible API server |
 | `bonsai status` | Show server status and active model |
+
+## API Server
+
+Bonsai can expose an OpenAI-compatible HTTP API, letting any application that speaks the OpenAI format interact with your local Bonsai models.
+
+```bash
+# Start the API server (Ollama must be running)
+bonsai api                    # localhost:8080
+bonsai api --port 3000        # custom port
+bonsai api --host 0.0.0.0    # all interfaces
+```
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/v1/chat/completions` | Chat completions (streaming & non-streaming) |
+| GET | `/v1/models` | List available models |
+| GET | `/health` | Health check |
+
+### Usage with OpenAI SDK
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8080/v1", api_key="unused")
+response = client.chat.completions.create(
+    model="bonsai-4b",
+    messages=[{"role": "user", "content": "hello"}]
+)
+print(response.choices[0].message.content)
+```
+
+### Usage with curl
+
+```bash
+curl http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"bonsai-4b","messages":[{"role":"user","content":"hello"}]}'
+```
+
+Works with LangChain, LlamaIndex, Continue.dev, Cursor, and any OpenAI-compatible client.
 
 ## Configuration
 

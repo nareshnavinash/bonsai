@@ -34,6 +34,7 @@ Commands:
   cp <source> <dest>       Copy a model
   create <name> -f <file>  Create a model from a Modelfile
   serve                    Start the Ollama server
+  api                      Start OpenAI-compatible API server
   models                   List available Bonsai models
   status                   Show server status
 
