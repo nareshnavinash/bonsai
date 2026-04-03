@@ -20,10 +20,10 @@ func init() {
 
 var rootCmd = &cobra.Command{
 	Use:   "bonsai",
-	Short: "Local model manager and coding assistant powered by Ollama",
-	Long: `bonsai - Local model manager and coding assistant powered by Ollama
+	Short: "Run prism-ml's 1-bit Bonsai models locally via Ollama",
+	Long: `bonsai - Run prism-ml's 1-bit Bonsai models locally via Ollama
 
-Model Commands:
+Commands:
   run [model] [prompt]     Start a chat session or run a one-shot prompt
   pull <model>             Download a model
   list                     List available models
@@ -35,18 +35,7 @@ Model Commands:
   create <name> -f <file>  Create a model from a Modelfile
   serve                    Start the Ollama server
   models                   List available Bonsai models
-
-Coding Tools:
-  tool ask <question>          Ask a coding question
-  tool summarize < file.py     Summarize code
-  tool docstring < func.py     Generate a docstring
-  tool error <message>         Explain an error
-  tool pr                      Draft a PR description
-  tool diff                    Explain staged diff
-  tool regex <description>     Generate a regex
-  tool commit                  Draft a commit message
-  tool testdata <description>  Generate test data
-  tool format <fmt> < input    Reformat text
+  status                   Show server status
 
 Environment:
   BONSAI_MODEL      Model name (default: bonsai-8b)

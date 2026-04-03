@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bonsai - Local AI Tools for Developers</title>
-<meta name="description" content="Developer AI tools that run entirely on your machine. 10 coding commands, 1-bit quantized models, zero cloud dependency.">
+<title>Bonsai - Run 1-bit Bonsai Models via Ollama</title>
+<meta name="description" content="Run prism-ml's 1-bit Bonsai models locally via Ollama. 14x smaller, 4-5x less energy, fast inference on consumer hardware.">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #0d1117; --bg-secondary: #161b22; --bg-tertiary: #21262d;
     --text: #e6edf3; --text-muted: #8b949e; --text-dim: #484f58;
     --accent: #10b981; --accent-light: #34d399; --accent-dim: #065f46;
-    --blue: #58a6ff; --border: #30363d;
+    --border: #30363d;
     --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
   }
@@ -58,16 +58,6 @@
   .feature-card h3 { font-size: 1.1rem; margin-bottom: 8px; }
   .feature-card p { color: var(--text-muted); font-size: 0.9rem; }
 
-  /* Tools */
-  .tools { padding: 80px 0; }
-  .tools-tabs { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
-  .tool-tab { padding: 8px 20px; border-radius: 6px; font-family: var(--mono); font-size: 0.85rem; background: var(--bg-secondary); border: 1px solid var(--border); cursor: pointer; color: var(--text-muted); transition: all 0.2s; }
-  .tool-tab:hover, .tool-tab.active { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
-  .tool-panels { max-width: 700px; margin: 0 auto; }
-  .tool-panel { display: none; }
-  .tool-panel.active { display: block; }
-  .tool-desc { text-align: center; color: var(--text-muted); margin-bottom: 20px; }
-
   /* Models */
   .models { padding: 80px 0; background: var(--bg-secondary); }
   .models-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; }
@@ -82,22 +72,20 @@
   .models-credit { text-align: center; font-size: 0.95rem; }
   .models-credit a { color: var(--accent-light); font-weight: 600; }
 
+  /* Why 1-bit */
+  .why { padding: 80px 0; }
+  .why-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; max-width: 800px; margin: 0 auto; }
+  .why-item { text-align: center; padding: 24px; }
+  .why-item .number { font-size: 2.5rem; font-weight: 800; color: var(--accent); font-family: var(--mono); }
+  .why-item .desc { color: var(--text-muted); font-size: 0.95rem; margin-top: 4px; }
+
   /* Quick Start */
-  .quickstart { padding: 80px 0; }
+  .quickstart { padding: 80px 0; background: var(--bg-secondary); }
   .steps { max-width: 650px; margin: 0 auto; }
   .step { display: flex; gap: 20px; margin-bottom: 32px; align-items: flex-start; }
   .step-num { flex-shrink: 0; width: 36px; height: 36px; background: var(--accent-dim); border: 1px solid var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: var(--mono); color: var(--accent-light); }
   .step-content h3 { margin-bottom: 8px; }
-  .step-content code { display: block; background: var(--bg-secondary); padding: 12px 16px; border-radius: 8px; font-family: var(--mono); font-size: 0.85rem; margin-top: 8px; border: 1px solid var(--border); }
-
-  /* Comparison */
-  .comparison { padding: 80px 0; background: var(--bg-secondary); }
-  .comparison table { width: 100%; max-width: 800px; margin: 0 auto; border-collapse: collapse; font-size: 0.9rem; }
-  .comparison th, .comparison td { padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); }
-  .comparison th { color: var(--text-muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
-  .comparison td:first-child { font-weight: 600; }
-  .comparison .yes { color: var(--accent); }
-  .comparison .no { color: var(--text-dim); }
+  .step-content code { display: block; background: var(--bg); padding: 12px 16px; border-radius: 8px; font-family: var(--mono); font-size: 0.85rem; margin-top: 8px; border: 1px solid var(--border); }
 
   /* Footer */
   footer { padding: 48px 0; border-top: 1px solid var(--border); text-align: center; }
@@ -106,13 +94,11 @@
   .footer-links a:hover { color: var(--text); }
   .footer-credit { color: var(--text-dim); font-size: 0.85rem; }
 
-  /* Responsive */
   @media (max-width: 768px) {
     .hero h1 { font-size: 2.5rem; }
     .features-grid, .models-grid { grid-template-columns: 1fr; }
+    .why-grid { grid-template-columns: 1fr; }
     .stats-strip { gap: 20px; font-size: 0.8rem; }
-    .comparison table { font-size: 0.8rem; }
-    .comparison th, .comparison td { padding: 10px 8px; }
   }
 </style>
 </head>
@@ -136,8 +122,8 @@
     <circle cx="55" cy="22" r="8" fill="#6ee7b7" opacity="0.5"/>
   </svg>
   <h1>bonsai</h1>
-  <p class="tagline">Local AI tools for developers</p>
-  <p class="subtitle">10 coding commands &middot; 1-bit models &middot; zero cloud dependency</p>
+  <p class="tagline">Run prism-ml's 1-bit Bonsai models locally via Ollama</p>
+  <p class="subtitle">14x smaller &middot; 4-5x less energy &middot; fast inference</p>
   <div class="hero-buttons">
     <a href="#quickstart" class="btn btn-primary">Get Started</a>
     <a href="https://github.com/nareshnavinash/bonsai" class="btn btn-secondary">View on GitHub</a>
@@ -149,17 +135,16 @@
       <div class="terminal-dot green"></div>
     </div>
     <div class="terminal-body">
-      <div><span class="prompt">$ </span><span class="cmd">git add -A</span></div>
-      <div><span class="prompt">$ </span><span class="cmd">bonsai tool commit</span></div>
-      <div class="output">feat(auth): add JWT token validation middleware</div>
+      <div><span class="prompt">$ </span><span class="cmd">bonsai pull bonsai-4b</span></div>
+      <div class="output">pulling 3727ef4ac6... 100% [====================] 572 MB</div>
+      <div class="output">success</div>
       <br>
-      <div><span class="prompt">$ </span><span class="cmd">bonsai tool error "panic: index out of range [5] with length 3"</span></div>
-      <div class="output">You tried to access index 5 of a slice that only has 3 elements.</div>
-      <div class="output">Check the loop bounds or add a length check before accessing the index.</div>
-      <br>
-      <div><span class="prompt">$ </span><span class="cmd">bonsai tool regex "valid email address"</span></div>
-      <div class="output">Pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$</div>
-      <div><span class="prompt">$ </span><span class="cursor"></span></div>
+      <div><span class="prompt">$ </span><span class="cmd">bonsai run</span></div>
+      <div class="output">Interactive chat with bonsai-4b. Type /bye to exit.</div>
+      <div><span class="prompt">>>> </span><span class="cmd">what is quantum computing?</span></div>
+      <div class="output">Quantum computing uses qubits that can exist in</div>
+      <div class="output">superposition, enabling parallel computation...</div>
+      <div><span class="prompt">>>> </span><span class="cursor"></span></div>
     </div>
   </div>
 </section>
@@ -167,145 +152,38 @@
 <!-- Features -->
 <section class="features">
   <div class="container">
-    <h2 class="section-title">Built for your workflow</h2>
-    <p class="section-subtitle">Purpose-built tools that integrate with how you already work</p>
+    <h2 class="section-title">Why Bonsai?</h2>
+    <p class="section-subtitle">The easiest way to run 1-bit quantized models locally</p>
     <div class="features-grid">
       <div class="feature-card">
-        <span class="feature-icon">&gt;_</span>
-        <h3>Git-Aware</h3>
-        <p>Reads your actual diffs and branch history. Commit messages and PR descriptions come from real context, not templates.</p>
+        <span class="feature-icon">1b</span>
+        <h3>True 1-Bit Models</h3>
+        <p>prism-ml's Bonsai models use real 1-bit quantization across all layers. No mixed-precision workarounds or escape hatches.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">{10}</span>
-        <h3>10 Dev Tools</h3>
-        <p>Commit messages, PR descriptions, error explanations, docstrings, regex, test data, code summaries, and more.</p>
+        <span class="feature-icon">&darr;</span>
+        <h3>One-Command Pull</h3>
+        <p>Built-in model registry maps shortnames to HuggingFace. Just <code>bonsai pull bonsai-4b</code> -- no URLs to remember.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">>>></span>
+        <h3>Streaming Chat</h3>
+        <p>Interactive multi-turn conversations with real-time token streaming. One-shot prompts too.</p>
       </div>
       <div class="feature-card">
         <span class="feature-icon">~/</span>
         <h3>100% Local</h3>
-        <p>Everything runs on your machine. No API keys, no telemetry, no cloud. Your code never leaves your computer.</p>
+        <p>Everything runs on your machine via Ollama. No API keys, no telemetry, no cloud dependency.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">1b</span>
-        <h3>Tiny Models</h3>
-        <p>1-bit quantized models as small as 248 MB. Runs fast on any hardware -- even phones and older laptops.</p>
+        <span class="feature-icon">&lt;1G</span>
+        <h3>Tiny Footprint</h3>
+        <p>Models from 248 MB to 1.2 GB. Run a capable LLM on a phone, laptop, or Raspberry Pi.</p>
       </div>
       <div class="feature-card">
-        <span class="feature-icon">>>></span>
-        <h3>Streaming</h3>
-        <p>See tokens as they generate in real-time. No waiting for complete responses. Works in interactive and one-shot modes.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">|&gt;</span>
-        <h3>Unix Philosophy</h3>
-        <p>Pipes, stdin, single-purpose tools. Composes with your existing shell workflow. <code>cat file.py | bonsai tool summarize</code></p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Tools -->
-<section class="tools">
-  <div class="container">
-    <h2 class="section-title">Developer Tools</h2>
-    <p class="section-subtitle">Each tool is focused on one task and does it well</p>
-    <div class="tools-tabs">
-      <button class="tool-tab active" onclick="showTool('commit')">commit</button>
-      <button class="tool-tab" onclick="showTool('pr')">pr</button>
-      <button class="tool-tab" onclick="showTool('ask')">ask</button>
-      <button class="tool-tab" onclick="showTool('error')">error</button>
-      <button class="tool-tab" onclick="showTool('regex')">regex</button>
-      <button class="tool-tab" onclick="showTool('docstring')">docstring</button>
-    </div>
-    <div class="tool-panels">
-      <div class="tool-panel active" id="tool-commit">
-        <p class="tool-desc">Reads <code>git diff --staged</code> and drafts a conventional commit message</p>
-        <div class="terminal">
-          <div class="terminal-header"><div class="terminal-dot red"></div><div class="terminal-dot yellow"></div><div class="terminal-dot green"></div></div>
-          <div class="terminal-body">
-            <div><span class="prompt">$ </span><span class="cmd">git add src/auth.go</span></div>
-            <div><span class="prompt">$ </span><span class="cmd">bonsai tool commit</span></div>
-            <div class="output">feat(auth): add JWT token validation middleware</div>
-          </div>
-        </div>
-      </div>
-      <div class="tool-panel" id="tool-pr">
-        <p class="tool-desc">Reads your branch commit log and generates a structured PR description</p>
-        <div class="terminal">
-          <div class="terminal-header"><div class="terminal-dot red"></div><div class="terminal-dot yellow"></div><div class="terminal-dot green"></div></div>
-          <div class="terminal-body">
-            <div><span class="prompt">$ </span><span class="cmd">bonsai tool pr</span></div>
-            <div class="output">## Title</div>
-            <div class="output">Add JWT authentication middleware</div>
-            <div class="output">&nbsp;</div>
-            <div class="output">## Summary</div>
-            <div class="output">- Add JWT validation for protected API routes</div>
-            <div class="output">- Extract user claims into request context</div>
-            <div class="output">- Add token refresh endpoint</div>
-            <div class="output">&nbsp;</div>
-            <div class="output">## Test plan</div>
-            <div class="output">- Verify valid tokens are accepted</div>
-            <div class="output">- Verify expired tokens are rejected</div>
-          </div>
-        </div>
-      </div>
-      <div class="tool-panel" id="tool-ask">
-        <p class="tool-desc">Ask any coding question and get a concise, direct answer</p>
-        <div class="terminal">
-          <div class="terminal-header"><div class="terminal-dot red"></div><div class="terminal-dot yellow"></div><div class="terminal-dot green"></div></div>
-          <div class="terminal-body">
-            <div><span class="prompt">$ </span><span class="cmd">bonsai tool ask "what does defer do in Go?"</span></div>
-            <div class="output">defer schedules a function call to run after the</div>
-            <div class="output">surrounding function returns. Deferred calls are</div>
-            <div class="output">executed in LIFO order. Common uses: closing files,</div>
-            <div class="output">unlocking mutexes, and cleanup operations.</div>
-          </div>
-        </div>
-      </div>
-      <div class="tool-panel" id="tool-error">
-        <p class="tool-desc">Explain errors and stack traces with actionable fix directions</p>
-        <div class="terminal">
-          <div class="terminal-header"><div class="terminal-dot red"></div><div class="terminal-dot yellow"></div><div class="terminal-dot green"></div></div>
-          <div class="terminal-body">
-            <div><span class="prompt">$ </span><span class="cmd">bonsai tool error "ECONNREFUSED 127.0.0.1:5432"</span></div>
-            <div class="output">Your app tried to connect to PostgreSQL on</div>
-            <div class="output">localhost:5432 but no server is listening there.</div>
-            <div class="output">Start your database or check the connection config.</div>
-          </div>
-        </div>
-      </div>
-      <div class="tool-panel" id="tool-regex">
-        <p class="tool-desc">Describe what you want to match; get a regex with explanation</p>
-        <div class="terminal">
-          <div class="terminal-header"><div class="terminal-dot red"></div><div class="terminal-dot yellow"></div><div class="terminal-dot green"></div></div>
-          <div class="terminal-body">
-            <div><span class="prompt">$ </span><span class="cmd">bonsai tool regex "ISO 8601 date"</span></div>
-            <div class="output">Pattern: ^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$</div>
-            <div class="output">Explanation: Matches dates in YYYY-MM-DD format</div>
-            <div class="output">Examples: 2026-04-03, 2025-12-31</div>
-          </div>
-        </div>
-      </div>
-      <div class="tool-panel" id="tool-docstring">
-        <p class="tool-desc">Pipe a function in, get a Google-style docstring back</p>
-        <div class="terminal">
-          <div class="terminal-header"><div class="terminal-dot red"></div><div class="terminal-dot yellow"></div><div class="terminal-dot green"></div></div>
-          <div class="terminal-body">
-            <div><span class="prompt">$ </span><span class="cmd">cat auth.py | bonsai tool docstring</span></div>
-            <div class="output">"""Validate a JWT token and return decoded claims.</div>
-            <div class="output">&nbsp;</div>
-            <div class="output">Args:</div>
-            <div class="output">&nbsp;&nbsp;token: The JWT string to validate.</div>
-            <div class="output">&nbsp;&nbsp;secret: The signing key for verification.</div>
-            <div class="output">&nbsp;</div>
-            <div class="output">Returns:</div>
-            <div class="output">&nbsp;&nbsp;A dict of decoded claims if valid.</div>
-            <div class="output">&nbsp;</div>
-            <div class="output">Raises:</div>
-            <div class="output">&nbsp;&nbsp;InvalidTokenError: If the token is expired or malformed.</div>
-            <div class="output">"""</div>
-          </div>
-        </div>
+        <span class="feature-icon">go</span>
+        <h3>Single Binary</h3>
+        <p>~1,200 lines of Go, two dependencies. Install with <code>go install</code> or download a release binary.</p>
       </div>
     </div>
   </div>
@@ -314,8 +192,8 @@
 <!-- Models -->
 <section class="models" id="models">
   <div class="container">
-    <h2 class="section-title">Powered by prism-ml Bonsai Models</h2>
-    <p class="section-subtitle">True 1-bit quantized language models -- not approximate quantization</p>
+    <h2 class="section-title">Bonsai Models by prism-ml</h2>
+    <p class="section-subtitle">True 1-bit quantized language models in GGUF format</p>
     <div class="models-grid">
       <div class="model-card">
         <h3>bonsai-8b</h3>
@@ -352,6 +230,32 @@
   </div>
 </section>
 
+<!-- Why 1-bit -->
+<section class="why">
+  <div class="container">
+    <h2 class="section-title">The 1-Bit Advantage</h2>
+    <p class="section-subtitle">More intelligence per byte than any other quantization approach</p>
+    <div class="why-grid">
+      <div class="why-item">
+        <div class="number">14x</div>
+        <div class="desc">Smaller than FP16 equivalents</div>
+      </div>
+      <div class="why-item">
+        <div class="number">4-5x</div>
+        <div class="desc">Lower energy per token</div>
+      </div>
+      <div class="why-item">
+        <div class="number">1.06</div>
+        <div class="desc">Intelligence/GB (vs 0.10 for full precision)</div>
+      </div>
+      <div class="why-item">
+        <div class="number">40+</div>
+        <div class="desc">Tokens/sec even on an iPhone</div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Quick Start -->
 <section class="quickstart" id="quickstart">
   <div class="container">
@@ -375,33 +279,11 @@
       <div class="step">
         <div class="step-num">3</div>
         <div class="step-content">
-          <h3>Pull a model and go</h3>
-          <code>bonsai pull bonsai-4b && bonsai tool ask "hello"</code>
+          <h3>Pull a model and chat</h3>
+          <code>bonsai pull bonsai-4b && bonsai run</code>
         </div>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- Comparison -->
-<section class="comparison">
-  <div class="container">
-    <h2 class="section-title">Bonsai vs. Cloud AI Tools</h2>
-    <p class="section-subtitle">Keep your code private, save money, work offline</p>
-    <table>
-      <thead>
-        <tr><th></th><th>Bonsai</th><th>GitHub Copilot</th><th>ChatGPT CLI</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Runs locally</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
-        <tr><td>API key required</td><td class="yes">No</td><td class="no">Yes</td><td class="no">Yes</td></tr>
-        <tr><td>Cost</td><td class="yes">Free</td><td class="no">$10+/mo</td><td class="no">$20+/mo</td></tr>
-        <tr><td>Git-aware tools</td><td class="yes">Yes</td><td class="no">Partial</td><td class="no">No</td></tr>
-        <tr><td>Model size</td><td>248 MB - 1.2 GB</td><td>N/A</td><td>N/A</td></tr>
-        <tr><td>Privacy</td><td class="yes">100% local</td><td class="no">Cloud</td><td class="no">Cloud</td></tr>
-        <tr><td>Offline capable</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
-      </tbody>
-    </table>
   </div>
 </section>
 
@@ -417,13 +299,5 @@
   </div>
 </footer>
 
-<script>
-function showTool(name) {
-  document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tool-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tool-' + name).classList.add('active');
-  event.target.classList.add('active');
-}
-</script>
 </body>
 </html>
