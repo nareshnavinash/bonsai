@@ -20,7 +20,7 @@ var showCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		model := args[0]
 
-		client, err := api.ClientFromEnvironment()
+		client, err := getClient()
 		if err != nil {
 			return err
 		}

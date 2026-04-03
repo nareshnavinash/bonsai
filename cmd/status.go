@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ollama/ollama/api"
 	"github.com/spf13/cobra"
 )
 
@@ -13,7 +12,7 @@ var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show server status",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		client, err := api.ClientFromEnvironment()
+		client, err := getClient()
 		if err != nil {
 			return err
 		}
@@ -28,8 +27,14 @@ var statusCmd = &cobra.Command{
 			status = "running"
 		}
 
+		// Show actual running model, not just configured default
+		modelInfo := defaultModel + " (configured)"
+		if resp, err := client.ListRunning(context.Background()); err == nil && len(resp.Models) > 0 {
+			modelInfo = resp.Models[0].Name + " (loaded)"
+		}
+
 		fmt.Printf("Server:   %s\n", host)
-		fmt.Printf("Model:    %s\n", defaultModel)
+		fmt.Printf("Model:    %s\n", modelInfo)
 		fmt.Printf("Status:   %s\n", status)
 		return nil
 	},

@@ -22,7 +22,9 @@ func RunREPL(client *api.Client, model string, opts *REPLOptions) error {
 		{Role: "system", Content: "You are a helpful assistant. Always respond in English unless the user explicitly asks for another language."},
 	}
 
-	fmt.Printf("Interactive chat with %s. Type /bye to exit, \"\"\" for multi-line input.\n\n", model)
+	fmt.Printf("Interactive chat with %s.\n", model)
+	fmt.Println("Commands: /bye or /exit (quit), /set temperature|top_p|num_ctx <value>, \"\"\" (multi-line)")
+	fmt.Println()
 
 	for {
 		fmt.Print(">>> ")
@@ -83,6 +85,10 @@ func RunREPL(client *api.Client, model string, opts *REPLOptions) error {
 		}
 	}
 
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("input error: %w", err)
+	}
+
 	return nil
 }
 
@@ -95,20 +101,29 @@ func handleSet(input string, opts *REPLOptions) {
 	key, val := parts[0], parts[1]
 	switch key {
 	case "temperature":
-		if f, err := strconv.ParseFloat(val, 64); err == nil {
-			opts.Temperature = f
-			fmt.Printf("Set temperature to %.1f\n", f)
+		f, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: invalid number %q for temperature\n", val)
+			return
 		}
+		opts.Temperature = f
+		fmt.Printf("Set temperature to %.1f\n", f)
 	case "top_p":
-		if f, err := strconv.ParseFloat(val, 64); err == nil {
-			opts.TopP = f
-			fmt.Printf("Set top_p to %.1f\n", f)
+		f, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: invalid number %q for top_p\n", val)
+			return
 		}
+		opts.TopP = f
+		fmt.Printf("Set top_p to %.1f\n", f)
 	case "num_ctx":
-		if n, err := strconv.Atoi(val); err == nil {
-			opts.NumCtx = n
-			fmt.Printf("Set num_ctx to %d\n", n)
+		n, err := strconv.Atoi(val)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: invalid integer %q for num_ctx\n", val)
+			return
 		}
+		opts.NumCtx = n
+		fmt.Printf("Set num_ctx to %d\n", n)
 	default:
 		fmt.Println("Usage: /set <temperature|top_p|num_ctx> <value>")
 	}

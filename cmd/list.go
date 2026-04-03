@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ollama/ollama/api"
 	"github.com/spf13/cobra"
 
 	"github.com/nareshnavinash/bonsai/internal/ui"
@@ -15,14 +14,14 @@ var listCmd = &cobra.Command{
 	Aliases: []string{"ls"},
 	Short:   "List available models",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		client, err := api.ClientFromEnvironment()
+		client, err := getClient()
 		if err != nil {
 			return err
 		}
 
 		resp, err := client.List(context.Background())
 		if err != nil {
-			return fmt.Errorf("cannot connect to Ollama: %w", err)
+			return fmt.Errorf("cannot list models: %w", err)
 		}
 
 		if len(resp.Models) == 0 {

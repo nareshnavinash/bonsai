@@ -24,6 +24,9 @@ func (p *ProgressBar) Update(completed int64) {
 		return
 	}
 	pct := float64(completed) / float64(p.total)
+	if pct > 1.0 {
+		pct = 1.0
+	}
 	filled := int(float64(p.width) * pct)
 	if filled > p.width {
 		filled = p.width
@@ -34,7 +37,7 @@ func (p *ProgressBar) Update(completed int64) {
 		bar += ">"
 		bar += strings.Repeat(" ", empty-1)
 	}
-	fmt.Printf("\r%s[%s] %d%% %s/%s",
+	fmt.Printf("\r%s[%s] %d%% %s/%s\033[K",
 		p.label, bar, int(pct*100),
 		FormatBytes(completed), FormatBytes(p.total))
 }

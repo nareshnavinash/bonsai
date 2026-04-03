@@ -14,7 +14,7 @@ var runCmd = &cobra.Command{
 	Use:   "run [model] [prompt]",
 	Short: "Start a chat session or run a one-shot prompt",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		client, err := api.ClientFromEnvironment()
+		client, err := getClient()
 		if err != nil {
 			return err
 		}
@@ -37,7 +37,10 @@ var runCmd = &cobra.Command{
 
 		// If no model specified, pick the best available local model
 		if model == "" {
-			model = ResolveModel(client)
+			model, err = ResolveModel(client)
+			if err != nil {
+				return err
+			}
 		}
 
 		prompt := strings.Join(promptParts, " ")

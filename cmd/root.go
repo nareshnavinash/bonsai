@@ -46,38 +46,41 @@ Environment:
 	},
 }
 
+// getClient creates an Ollama API client with a helpful error message on failure.
+func getClient() (*api.Client, error) {
+	client, err := api.ClientFromEnvironment()
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to Ollama (is it running? try 'bonsai serve'): %w", err)
+	}
+	return client, nil
+}
+
 // ResolveModel picks the best model to use when none is specified.
-// Prefers a locally installed bonsai model, falls back to any local model,
-// or exits with a helpful message if nothing is installed.
-func ResolveModel(client *api.Client) string {
+// Prefers a locally installed bonsai model, falls back to any local model.
+func ResolveModel(client *api.Client) (string, error) {
 	// If BONSAI_MODEL is set explicitly, use it
 	if defaultModel != "bonsai-8b" {
-		return defaultModel
+		return defaultModel, nil
 	}
 
 	resp, err := client.List(context.Background())
 	if err != nil {
-		return defaultModel
+		return defaultModel, nil
 	}
 
 	// First pass: look for any bonsai model
 	for _, m := range resp.Models {
 		if strings.Contains(strings.ToLower(m.Name), "bonsai") {
-			return m.Name
+			return m.Name, nil
 		}
 	}
 
 	// Second pass: use any available model
 	if len(resp.Models) > 0 {
-		return resp.Models[0].Name
+		return resp.Models[0].Name, nil
 	}
 
-	// Nothing installed
-	fmt.Println("No models installed. Pull one first:")
-	fmt.Println("  bonsai models        List available Bonsai models")
-	fmt.Println("  bonsai pull bonsai-4b Download a model")
-	os.Exit(1)
-	return ""
+	return "", fmt.Errorf("no models installed. Pull one first:\n  bonsai models        List available Bonsai models\n  bonsai pull bonsai-4b Download a model")
 }
 
 func Execute() error {

@@ -25,7 +25,7 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("base model required: bonsai create %s --from <model>", name)
 		}
 
-		client, err := api.ClientFromEnvironment()
+		client, err := getClient()
 		if err != nil {
 			return err
 		}

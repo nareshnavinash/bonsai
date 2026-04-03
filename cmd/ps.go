@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ollama/ollama/api"
 	"github.com/spf13/cobra"
 
 	"github.com/nareshnavinash/bonsai/internal/ui"
@@ -15,14 +14,14 @@ var psCmd = &cobra.Command{
 	Use:   "ps",
 	Short: "List running models",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		client, err := api.ClientFromEnvironment()
+		client, err := getClient()
 		if err != nil {
 			return err
 		}
 
 		resp, err := client.ListRunning(context.Background())
 		if err != nil {
-			return fmt.Errorf("cannot connect to Ollama: %w", err)
+			return fmt.Errorf("cannot list running models: %w", err)
 		}
 
 		if len(resp.Models) == 0 {

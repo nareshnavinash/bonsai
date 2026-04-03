@@ -18,13 +18,19 @@ var pullCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		model := registry.Resolve(args[0])
 
-		client, err := api.ClientFromEnvironment()
+		client, err := getClient()
 		if err != nil {
 			return err
 		}
 
 		var currentBar *ui.ProgressBar
 		var currentDigest string
+
+		defer func() {
+			if currentBar != nil {
+				currentBar.Done()
+			}
+		}()
 
 		err = client.Pull(context.Background(), &api.PullRequest{Model: model}, func(resp api.ProgressResponse) error {
 			if resp.Digest != "" && resp.Total > 0 {
@@ -49,10 +55,6 @@ var pullCmd = &cobra.Command{
 			}
 			return nil
 		})
-
-		if currentBar != nil {
-			currentBar.Done()
-		}
 
 		return err
 	},

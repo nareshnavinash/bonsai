@@ -15,7 +15,7 @@ var cpCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		source, dest := args[0], args[1]
 
-		client, err := api.ClientFromEnvironment()
+		client, err := getClient()
 		if err != nil {
 			return err
 		}
