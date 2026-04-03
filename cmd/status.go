@@ -3,34 +3,43 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/nareshnavinash/bonsai/internal/llm"
+	"github.com/nareshnavinash/bonsai/internal/registry"
 )
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show server status",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		client, err := getClient()
-		if err != nil {
-			return err
-		}
+		mgr := getServerManager()
+		client := getLLMClient()
 
-		host := os.Getenv("OLLAMA_HOST")
-		if host == "" {
-			host = "http://localhost:11434"
-		}
+		host := llm.DefaultBaseURL()
+
+		processRunning := mgr.IsRunning()
+		serverHealthy := client.Health(context.Background()) == nil
 
 		status := "stopped"
-		if err := client.Heartbeat(context.Background()); err == nil {
+		if processRunning && serverHealthy {
 			status = "running"
+		} else if processRunning {
+			status = "starting"
 		}
 
-		// Show actual running model, not just configured default
 		modelInfo := defaultModel + " (configured)"
-		if resp, err := client.ListRunning(context.Background()); err == nil && len(resp.Models) > 0 {
-			modelInfo = resp.Models[0].Name + " (loaded)"
+		if processRunning {
+			modelPath := mgr.LoadedModel()
+			modelName := registry.ModelFileName(modelPath)
+			for _, m := range registry.Models {
+				if m.GGUFFile == modelName {
+					modelName = m.Name
+					break
+				}
+			}
+			modelInfo = modelName + " (loaded)"
 		}
 
 		fmt.Printf("Server:   %s\n", host)

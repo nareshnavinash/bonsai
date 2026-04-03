@@ -2,27 +2,33 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 
 	"github.com/spf13/cobra"
+
+	"github.com/nareshnavinash/bonsai/internal/registry"
 )
 
 var serveCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Start the Ollama server",
+	Use:   "serve [model]",
+	Short: "Start the llama-server",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("Starting Ollama server...")
-
-		c := exec.Command("ollama", "serve")
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		c.Stdin = os.Stdin
-
-		if err := c.Run(); err != nil {
-			return fmt.Errorf("failed to start Ollama: %w", err)
+		model := defaultModel
+		if len(args) > 0 {
+			model = args[0]
 		}
-		return nil
+
+		modelPath, err := registry.ResolveModelPath(model)
+		if err != nil {
+			return err
+		}
+
+		mgr := getServerManager()
+		mgr.Config.ModelPath = modelPath
+
+		fmt.Printf("Starting llama-server with %s on port %d...\n", modelPath, mgr.Config.Port)
+		fmt.Println("Press Ctrl+C to stop.")
+
+		return mgr.StartForeground()
 	},
 }
 

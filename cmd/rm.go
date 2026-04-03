@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
+	"os"
 
-	"github.com/ollama/ollama/api"
 	"github.com/spf13/cobra"
+
+	"github.com/nareshnavinash/bonsai/internal/registry"
 )
 
 var rmCmd = &cobra.Command{
@@ -13,19 +14,17 @@ var rmCmd = &cobra.Command{
 	Short: "Remove a model",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		model := args[0]
-
-		client, err := getClient()
+		name := args[0]
+		path, err := registry.ResolveModelPath(name)
 		if err != nil {
-			return err
+			return fmt.Errorf("model %q not found locally: %w", name, err)
 		}
 
-		err = client.Delete(context.Background(), &api.DeleteRequest{Model: model})
-		if err != nil {
-			return fmt.Errorf("failed to delete %q: %w", model, err)
+		if err := os.Remove(path); err != nil {
+			return fmt.Errorf("failed to delete %q: %w", path, err)
 		}
 
-		fmt.Printf("Deleted %s\n", model)
+		fmt.Printf("Deleted %s (%s)\n", name, path)
 		return nil
 	},
 }

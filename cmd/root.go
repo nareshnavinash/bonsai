@@ -1,13 +1,15 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/ollama/ollama/api"
 	"github.com/spf13/cobra"
+
+	"github.com/nareshnavinash/bonsai/internal/llm"
+	"github.com/nareshnavinash/bonsai/internal/registry"
+	"github.com/nareshnavinash/bonsai/internal/server"
 )
 
 var defaultModel = "bonsai-8b"
@@ -20,68 +22,82 @@ func init() {
 
 var rootCmd = &cobra.Command{
 	Use:   "bonsai",
-	Short: "Run prism-ml's 1-bit Bonsai models locally via Ollama",
-	Long: `bonsai - Run prism-ml's 1-bit Bonsai models locally via Ollama
+	Short: "Run prism-ml's 1-bit Bonsai models locally via llama.cpp",
+	Long: `bonsai - Run prism-ml's 1-bit Bonsai models locally
 
 Commands:
   run [model] [prompt]     Start a chat session or run a one-shot prompt
   pull <model>             Download a model
-  list                     List available models
+  list                     List installed models
   show <model>             Show model details
-  ps                       List running models
-  stop <model>             Unload a model from memory
+  ps                       Show running server status
+  stop                     Stop the server
   rm <model>               Remove a model
-  cp <source> <dest>       Copy a model
-  create <name> -f <file>  Create a model from a Modelfile
-  serve                    Start the Ollama server
+  cp <source> <dest>       Copy a model file
+  serve [model]            Start the llama-server
   api                      Start OpenAI-compatible API server
   models                   List available Bonsai models
   status                   Show server status
 
 Environment:
-  BONSAI_MODEL      Model name (default: bonsai-8b)
-  OLLAMA_HOST       Ollama server URL (default: http://localhost:11434)`,
-	Version: "1.0.0",
+  BONSAI_MODEL        Model name (default: bonsai-8b)
+  BONSAI_HOST         Server URL (default: http://127.0.0.1:8081)
+  BONSAI_PORT         Server port (default: 8081)
+  BONSAI_THREADS      CPU threads for inference
+  BONSAI_MODELS_DIR   Model storage directory (default: ~/.bonsai/models/)
+  LLAMA_SERVER_BIN    Path to llama-server binary`,
+	Version: "2.0.0",
 	CompletionOptions: cobra.CompletionOptions{
 		HiddenDefaultCmd: true,
 	},
 }
 
-// getClient creates an Ollama API client with a helpful error message on failure.
-func getClient() (*api.Client, error) {
-	client, err := api.ClientFromEnvironment()
-	if err != nil {
-		return nil, fmt.Errorf("cannot connect to Ollama (is it running? try 'bonsai serve'): %w", err)
-	}
-	return client, nil
+// getLLMClient creates an OpenAI-compatible HTTP client.
+func getLLMClient() *llm.Client {
+	return llm.NewClientFromEnv()
+}
+
+// getServerManager creates a server lifecycle manager.
+func getServerManager() *server.Manager {
+	return server.NewManager()
 }
 
 // ResolveModel picks the best model to use when none is specified.
-// Prefers a locally installed bonsai model, falls back to any local model.
-func ResolveModel(client *api.Client) (string, error) {
-	// If BONSAI_MODEL is set explicitly, use it
+func ResolveModel() (string, error) {
 	if defaultModel != "bonsai-8b" {
 		return defaultModel, nil
 	}
 
-	resp, err := client.List(context.Background())
+	locals, err := registry.ScanLocal()
 	if err != nil {
 		return defaultModel, nil
 	}
 
-	// First pass: look for any bonsai model
-	for _, m := range resp.Models {
-		if strings.Contains(strings.ToLower(m.Name), "bonsai") {
+	// First pass: look for any known bonsai model
+	for _, m := range locals {
+		if m.Known {
 			return m.Name, nil
 		}
 	}
 
-	// Second pass: use any available model
-	if len(resp.Models) > 0 {
-		return resp.Models[0].Name, nil
+	// Second pass: use any available .gguf file
+	if len(locals) > 0 {
+		return locals[0].Name, nil
+	}
+
+	// Check legacy paths
+	for _, m := range registry.Models {
+		if _, err := registry.ResolveModelPath(m.Name); err == nil {
+			return m.Name, nil
+		}
 	}
 
 	return "", fmt.Errorf("no models installed. Pull one first:\n  bonsai models        List available Bonsai models\n  bonsai pull bonsai-4b Download a model")
+}
+
+// ResolveModelForDisplay returns the model name with any name resolution applied.
+func ResolveModelForDisplay(name string) string {
+	return strings.TrimSuffix(registry.Resolve(name), ":latest")
 }
 
 func Execute() error {

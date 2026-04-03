@@ -1,6 +1,6 @@
-package api
+package llm
 
-// OpenAI-compatible request/response types
+// OpenAI-compatible request/response types used throughout bonsai.
 
 type ChatCompletionRequest struct {
 	Model       string    `json:"model,omitempty"`
@@ -8,6 +8,7 @@ type ChatCompletionRequest struct {
 	Stream      bool      `json:"stream,omitempty"`
 	Temperature *float64  `json:"temperature,omitempty"`
 	TopP        *float64  `json:"top_p,omitempty"`
+	MaxTokens   *int      `json:"max_tokens,omitempty"`
 }
 
 type Message struct {

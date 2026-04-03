@@ -4,26 +4,21 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ollama/ollama/api"
 	"github.com/spf13/cobra"
 
 	"github.com/nareshnavinash/bonsai/internal/chat"
+	"github.com/nareshnavinash/bonsai/internal/llm"
+	"github.com/nareshnavinash/bonsai/internal/registry"
 )
 
 var runCmd = &cobra.Command{
 	Use:   "run [model] [prompt]",
 	Short: "Start a chat session or run a one-shot prompt",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		client, err := getClient()
-		if err != nil {
-			return err
-		}
-
 		model := ""
 		var promptParts []string
 
 		if len(args) > 0 {
-			// First arg: model name if it contains ":" or is a known short name
 			first := args[0]
 			if strings.Contains(first, ":") || len(args) > 1 {
 				model = first
@@ -35,24 +30,39 @@ var runCmd = &cobra.Command{
 			}
 		}
 
-		// If no model specified, pick the best available local model
 		if model == "" {
-			model, err = ResolveModel(client)
+			var err error
+			model, err = ResolveModel()
 			if err != nil {
 				return err
 			}
 		}
 
+		// Resolve model name to GGUF file path
+		modelPath, err := registry.ResolveModelPath(model)
+		if err != nil {
+			return err
+		}
+
+		// Ensure llama-server is running with this model
+		mgr := getServerManager()
+		baseURL, err := mgr.EnsureRunning(modelPath)
+		if err != nil {
+			return err
+		}
+
+		client := llm.NewClient(baseURL)
+
 		prompt := strings.Join(promptParts, " ")
 
-		systemMsg := api.Message{
+		systemMsg := llm.Message{
 			Role:    "system",
 			Content: "You are a helpful assistant. Always respond in English unless the user explicitly asks for another language.",
 		}
 
 		if prompt != "" {
 			// One-shot mode
-			messages := []api.Message{
+			messages := []llm.Message{
 				systemMsg,
 				{Role: "user", Content: prompt},
 			}
@@ -69,7 +79,18 @@ var runCmd = &cobra.Command{
 
 		// Interactive REPL mode
 		opts := &chat.REPLOptions{Temperature: 0.7}
-		return chat.RunREPL(client, model, opts)
+		switchFn := func(name string) (string, error) {
+			newPath, err := registry.ResolveModelPath(name)
+			if err != nil {
+				return "", err
+			}
+			_, err = mgr.EnsureRunning(newPath)
+			if err != nil {
+				return "", err
+			}
+			return registry.Resolve(name), nil
+		}
+		return chat.RunREPL(client, model, opts, switchFn)
 	},
 }
 

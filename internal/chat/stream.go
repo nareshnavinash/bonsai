@@ -6,65 +6,49 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ollama/ollama/api"
-	"github.com/nareshnavinash/bonsai/internal/ui"
+	"github.com/nareshnavinash/bonsai/internal/llm"
 )
 
 func filterArtifacts(s string) string {
-	// Remove common model artifacts
 	s = strings.ReplaceAll(s, "<tool_call>", "")
 	s = strings.ReplaceAll(s, "</tool_call>", "")
 	return strings.TrimSpace(s)
 }
 
-func StreamChat(client *api.Client, model string, messages []api.Message, options map[string]interface{}) (string, error) {
-	req := &api.ChatRequest{
+func StreamChat(client *llm.Client, model string, messages []llm.Message, options map[string]interface{}) (string, error) {
+	req := &llm.ChatCompletionRequest{
 		Model:    model,
 		Messages: messages,
-		Options:  options,
+		Stream:   true,
 	}
 
-	var thinkBuf string
-	var response string
-	var gotContent bool
-	var spinner *ui.Spinner
+	// Apply options
+	if v, ok := options["temperature"]; ok {
+		if f, ok := v.(float64); ok {
+			req.Temperature = &f
+		}
+	}
+	if v, ok := options["top_p"]; ok {
+		if f, ok := v.(float64); ok {
+			req.TopP = &f
+		}
+	}
 
-	err := client.Chat(context.Background(), req, func(resp api.ChatResponse) error {
-		if resp.Message.Content != "" {
-			if !gotContent {
-				// First content token — stop spinner, start streaming
-				gotContent = true
-				if spinner != nil {
-					spinner.Stop("")
-					spinner = nil
-				}
+	var response string
+
+	err := client.ChatCompletionStream(context.Background(), req, func(resp llm.ChatCompletionResponse) error {
+		if len(resp.Choices) > 0 && resp.Choices[0].Delta != nil {
+			content := resp.Choices[0].Delta.Content
+			if content != "" {
+				fmt.Fprint(os.Stdout, content)
+				response += content
 			}
-			fmt.Fprint(os.Stdout, resp.Message.Content)
-			response += resp.Message.Content
-		} else if resp.Message.Thinking != "" {
-			// Buffer thinking silently, show spinner
-			if spinner == nil && !gotContent {
-				spinner = ui.NewSpinner("thinking...")
-				spinner.Start()
-			}
-			thinkBuf += resp.Message.Thinking
 		}
 		return nil
 	})
 
-	if spinner != nil {
-		spinner.Stop("")
-	}
-
-	// If no content tokens arrived, the thinking IS the response
-	if !gotContent && thinkBuf != "" {
-		// Filter out model artifacts like <tool_call> tags
-		cleaned := filterArtifacts(thinkBuf)
-		if cleaned != "" {
-			fmt.Fprint(os.Stdout, cleaned)
-			response = cleaned
-		}
-	}
+	// Filter artifacts from accumulated response
+	response = filterArtifacts(response)
 
 	return response, err
 }

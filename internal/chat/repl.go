@@ -7,8 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ollama/ollama/api"
-
+	"github.com/nareshnavinash/bonsai/internal/llm"
 	"github.com/nareshnavinash/bonsai/internal/registry"
 )
 
@@ -18,10 +17,14 @@ type REPLOptions struct {
 	NumCtx      int
 }
 
-func RunREPL(client *api.Client, model string, opts *REPLOptions) error {
+// SwitchModelFn is called when the user runs /model <name> in the REPL.
+// It should restart the server with the new model and return the new model name.
+type SwitchModelFn func(name string) (newModel string, err error)
+
+func RunREPL(client *llm.Client, model string, opts *REPLOptions, switchFn SwitchModelFn) error {
 	scanner := bufio.NewScanner(os.Stdin)
-	systemMsg := api.Message{Role: "system", Content: "You are a helpful assistant. Always respond in English unless the user explicitly asks for another language."}
-	messages := []api.Message{systemMsg}
+	systemMsg := llm.Message{Role: "system", Content: "You are a helpful assistant. Always respond in English unless the user explicitly asks for another language."}
+	messages := []llm.Message{systemMsg}
 
 	fmt.Printf("Interactive chat with %s. Type /help for commands.\n\n", model)
 
@@ -38,33 +41,38 @@ func RunREPL(client *api.Client, model string, opts *REPLOptions) error {
 			break
 		}
 
-		// Handle /help
 		if input == "/help" {
 			printHelp()
 			continue
 		}
 
-		// Handle /clear
 		if input == "/clear" {
-			messages = []api.Message{systemMsg}
+			messages = []llm.Message{systemMsg}
 			fmt.Println("Conversation cleared.")
 			continue
 		}
 
-		// Handle /model <name>
 		if strings.HasPrefix(input, "/model ") {
 			newModel := strings.TrimSpace(input[7:])
 			if newModel == "" {
 				fmt.Fprintf(os.Stderr, "Usage: /model <name>\n")
 				continue
 			}
-			model = registry.Resolve(newModel)
-			messages = []api.Message{systemMsg}
+			if switchFn != nil {
+				resolved, err := switchFn(newModel)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error switching model: %v\n", err)
+					continue
+				}
+				model = resolved
+			} else {
+				model = registry.Resolve(newModel)
+			}
+			messages = []llm.Message{systemMsg}
 			fmt.Printf("Switched to %s. Conversation cleared.\n", model)
 			continue
 		}
 
-		// Handle /set command
 		if strings.HasPrefix(input, "/set ") {
 			handleSet(input[5:], opts)
 			continue
@@ -93,20 +101,19 @@ func RunREPL(client *api.Client, model string, opts *REPLOptions) error {
 			}
 		}
 
-		messages = append(messages, api.Message{Role: "user", Content: fullInput})
+		messages = append(messages, llm.Message{Role: "user", Content: fullInput})
 
 		options := buildOptions(opts)
 		response, err := StreamChat(client, model, messages, options)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "\nError: %v\n\n", err)
-			// Remove failed user message
 			messages = messages[:len(messages)-1]
 			continue
 		}
 
 		fmt.Print("\n\n")
 		if strings.TrimSpace(response) != "" {
-			messages = append(messages, api.Message{Role: "assistant", Content: response})
+			messages = append(messages, llm.Message{Role: "assistant", Content: response})
 		}
 	}
 
@@ -172,9 +179,6 @@ func buildOptions(opts *REPLOptions) map[string]interface{} {
 	}
 	if opts.TopP > 0 {
 		m["top_p"] = opts.TopP
-	}
-	if opts.NumCtx > 0 {
-		m["num_ctx"] = opts.NumCtx
 	}
 	return m
 }

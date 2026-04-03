@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/ollama/ollama/api"
 	"github.com/spf13/cobra"
 
 	"github.com/nareshnavinash/bonsai/internal/registry"
@@ -16,47 +14,38 @@ var pullCmd = &cobra.Command{
 	Short: "Download a model",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		model := registry.Resolve(args[0])
-
-		client, err := getClient()
-		if err != nil {
-			return err
+		model := registry.FindModel(args[0])
+		if model == nil {
+			return fmt.Errorf("unknown model %q. Run 'bonsai models' to see available models", args[0])
 		}
 
-		var currentBar *ui.ProgressBar
-		var currentDigest string
-
-		defer func() {
-			if currentBar != nil {
-				currentBar.Done()
-			}
-		}()
-
-		err = client.Pull(context.Background(), &api.PullRequest{Model: model}, func(resp api.ProgressResponse) error {
-			if resp.Digest != "" && resp.Total > 0 {
-				if resp.Digest != currentDigest {
-					if currentBar != nil {
-						currentBar.Done()
-					}
-					shortDigest := ui.TruncateID(resp.Digest)
-					currentBar = ui.NewProgressBar(resp.Total, fmt.Sprintf("pulling %s... ", shortDigest))
-					currentDigest = resp.Digest
-				}
-				if currentBar != nil {
-					currentBar.Update(resp.Completed)
-				}
-			} else {
-				if currentBar != nil {
-					currentBar.Done()
-					currentBar = nil
-					currentDigest = ""
-				}
-				fmt.Println(resp.Status)
-			}
+		// Check if already downloaded
+		if registry.IsDownloaded(model) {
+			fmt.Printf("%s is already downloaded at %s\n", model.Name, model.LocalPath())
 			return nil
-		})
+		}
 
-		return err
+		fmt.Printf("Downloading %s (%s)...\n", model.Name, model.Size)
+
+		var bar *ui.ProgressBar
+
+		err := registry.Download(cmd.Context(), model, func(downloaded, total int64) {
+			if bar == nil && total > 0 {
+				bar = ui.NewProgressBar(total, "pulling... ")
+			}
+			if bar != nil {
+				bar.Update(downloaded)
+			}
+		})
+		if err != nil {
+			return fmt.Errorf("download failed: %w", err)
+		}
+
+		if bar != nil {
+			bar.Done()
+		}
+		fmt.Printf("Downloaded %s to %s\n", model.Name, model.LocalPath())
+		return nil
 	},
 }
 

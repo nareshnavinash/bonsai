@@ -8,13 +8,13 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	ollamaapi "github.com/ollama/ollama/api"
 
+	"github.com/nareshnavinash/bonsai/internal/llm"
 	"github.com/nareshnavinash/bonsai/internal/registry"
 )
 
 type Server struct {
-	Client       *ollamaapi.Client
+	Client       *llm.Client
 	DefaultModel string
 	Host         string
 	Port         int
@@ -56,27 +56,21 @@ func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	models := []Model{}
+	models := []llm.Model{}
 
-	// Add installed Ollama models
-	if resp, err := s.Client.List(context.Background()); err == nil {
-		for _, m := range resp.Models {
-			models = append(models, Model{
-				ID:      m.Name,
-				Object:  "model",
-				OwnedBy: "local",
-			})
-		}
+	// Add models from the backend server
+	if resp, err := s.Client.Models(r.Context()); err == nil {
+		models = append(models, resp.Data...)
 	}
 
-	// Add bonsai registry models (if not already installed)
+	// Add bonsai registry models (if not already listed)
 	installed := map[string]bool{}
 	for _, m := range models {
 		installed[m.ID] = true
 	}
 	for _, m := range registry.Models {
-		if !installed[m.HFRepo] && !installed[m.Name] {
-			models = append(models, Model{
+		if !installed[m.Name] {
+			models = append(models, llm.Model{
 				ID:      m.Name,
 				Object:  "model",
 				OwnedBy: "prism-ml",
@@ -85,7 +79,7 @@ func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(ModelList{
+	json.NewEncoder(w).Encode(llm.ModelList{
 		Object: "list",
 		Data:   models,
 	})
@@ -97,7 +91,7 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req ChatCompletionRequest
+	var req llm.ChatCompletionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error(), "invalid_request_error")
 		return
@@ -108,93 +102,50 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resolve model
-	model := s.DefaultModel
-	if req.Model != "" {
-		model = registry.Resolve(req.Model)
-	}
-
-	// Build Ollama messages
-	ollamaMessages := make([]ollamaapi.Message, len(req.Messages))
-	for i, m := range req.Messages {
-		ollamaMessages[i] = ollamaapi.Message{
-			Role:    m.Role,
-			Content: m.Content,
-		}
-	}
-
-	// Build options
-	options := map[string]interface{}{}
-	if req.Temperature != nil {
-		options["temperature"] = *req.Temperature
-	}
-	if req.TopP != nil {
-		options["top_p"] = *req.TopP
-	}
-
-	chatReq := &ollamaapi.ChatRequest{
-		Model:    model,
-		Messages: ollamaMessages,
-		Options:  options,
+	// Resolve model name
+	if req.Model == "" {
+		req.Model = s.DefaultModel
+	} else {
+		req.Model = registry.Resolve(req.Model)
 	}
 
 	requestID := "chatcmpl-" + uuid.New().String()[:8]
 
 	if req.Stream {
-		s.handleStream(w, chatReq, requestID, model)
+		s.handleStream(w, r.Context(), &req, requestID)
 	} else {
-		s.handleNonStream(w, chatReq, requestID, model)
+		s.handleNonStream(w, r.Context(), &req, requestID)
 	}
 }
 
-func (s *Server) handleNonStream(w http.ResponseWriter, req *ollamaapi.ChatRequest, id, model string) {
-	var fullResponse string
-
-	err := s.Client.Chat(context.Background(), req, func(resp ollamaapi.ChatResponse) error {
-		if resp.Message.Content != "" {
-			fullResponse += resp.Message.Content
-		}
-		// If model only produces thinking tokens, capture those as fallback
-		if resp.Message.Thinking != "" && fullResponse == "" {
-			// Will be used only if no content tokens arrive
-		}
-		return nil
-	})
-
+func (s *Server) handleNonStream(w http.ResponseWriter, ctx context.Context, req *llm.ChatCompletionRequest, id string) {
+	req.Stream = false
+	resp, err := s.Client.ChatCompletion(ctx, req)
 	if err != nil {
-		if strings.Contains(err.Error(), "connection refused") {
-			writeError(w, http.StatusServiceUnavailable, "cannot connect to Ollama", "server_error")
+		if strings.Contains(err.Error(), "connection refused") || strings.Contains(err.Error(), "not reachable") {
+			writeError(w, http.StatusServiceUnavailable, "cannot connect to inference server", "server_error")
 		} else if strings.Contains(err.Error(), "not found") {
-			writeError(w, http.StatusNotFound, "model not found: "+model, "invalid_request_error")
+			writeError(w, http.StatusNotFound, "model not found: "+req.Model, "invalid_request_error")
 		} else {
 			writeError(w, http.StatusInternalServerError, err.Error(), "server_error")
 		}
 		return
 	}
 
-	// Filter artifacts
-	fullResponse = strings.ReplaceAll(fullResponse, "<tool_call>", "")
-	fullResponse = strings.ReplaceAll(fullResponse, "</tool_call>", "")
-	fullResponse = strings.TrimSpace(fullResponse)
-
-	stop := "stop"
-	resp := ChatCompletionResponse{
-		ID:     id,
-		Object: "chat.completion",
-		Model:  model,
-		Choices: []Choice{{
-			Index:        0,
-			Message:      &Message{Role: "assistant", Content: fullResponse},
-			FinishReason: &stop,
-		}},
-		Usage: Usage{},
+	// Filter artifacts from response
+	if len(resp.Choices) > 0 && resp.Choices[0].Message != nil {
+		content := resp.Choices[0].Message.Content
+		content = strings.ReplaceAll(content, "<tool_call>", "")
+		content = strings.ReplaceAll(content, "</tool_call>", "")
+		resp.Choices[0].Message.Content = strings.TrimSpace(content)
 	}
 
+	resp.ID = id
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
 
-func (s *Server) handleStream(w http.ResponseWriter, req *ollamaapi.ChatRequest, id, model string) {
+func (s *Server) handleStream(w http.ResponseWriter, ctx context.Context, req *llm.ChatCompletionRequest, id string) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		writeError(w, http.StatusInternalServerError, "streaming not supported", "server_error")
@@ -205,26 +156,31 @@ func (s *Server) handleStream(w http.ResponseWriter, req *ollamaapi.ChatRequest,
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	err := s.Client.Chat(context.Background(), req, func(resp ollamaapi.ChatResponse) error {
-		content := resp.Message.Content
-		if content == "" {
+	req.Stream = true
+	err := s.Client.ChatCompletionStream(ctx, req, func(resp llm.ChatCompletionResponse) error {
+		if len(resp.Choices) == 0 {
+			return nil
+		}
+		delta := resp.Choices[0].Delta
+		if delta == nil || delta.Content == "" {
 			return nil
 		}
 
 		// Filter artifacts
+		content := delta.Content
 		content = strings.ReplaceAll(content, "<tool_call>", "")
 		content = strings.ReplaceAll(content, "</tool_call>", "")
 		if content == "" {
 			return nil
 		}
 
-		chunk := ChatCompletionResponse{
+		chunk := llm.ChatCompletionResponse{
 			ID:     id,
 			Object: "chat.completion.chunk",
-			Model:  model,
-			Choices: []Choice{{
+			Model:  req.Model,
+			Choices: []llm.Choice{{
 				Index:        0,
-				Delta:        &Message{Role: "assistant", Content: content},
+				Delta:        &llm.Message{Role: "assistant", Content: content},
 				FinishReason: nil,
 			}},
 		}
@@ -236,7 +192,7 @@ func (s *Server) handleStream(w http.ResponseWriter, req *ollamaapi.ChatRequest,
 	})
 
 	if err != nil {
-		errChunk := ErrorResponse{Error: ErrorDetail{Message: err.Error(), Type: "server_error"}}
+		errChunk := llm.ErrorResponse{Error: llm.ErrorDetail{Message: err.Error(), Type: "server_error"}}
 		data, _ := json.Marshal(errChunk)
 		fmt.Fprintf(w, "data: %s\n\n", data)
 		flusher.Flush()
@@ -245,13 +201,13 @@ func (s *Server) handleStream(w http.ResponseWriter, req *ollamaapi.ChatRequest,
 
 	// Send finish chunk
 	stop := "stop"
-	finishChunk := ChatCompletionResponse{
+	finishChunk := llm.ChatCompletionResponse{
 		ID:     id,
 		Object: "chat.completion.chunk",
-		Model:  model,
-		Choices: []Choice{{
+		Model:  req.Model,
+		Choices: []llm.Choice{{
 			Index:        0,
-			Delta:        &Message{},
+			Delta:        &llm.Message{},
 			FinishReason: &stop,
 		}},
 	}
@@ -264,7 +220,7 @@ func (s *Server) handleStream(w http.ResponseWriter, req *ollamaapi.ChatRequest,
 func writeError(w http.ResponseWriter, status int, message, errType string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(ErrorResponse{
-		Error: ErrorDetail{Message: message, Type: errType},
+	json.NewEncoder(w).Encode(llm.ErrorResponse{
+		Error: llm.ErrorDetail{Message: message, Type: errType},
 	})
 }

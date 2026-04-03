@@ -1,62 +1,41 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/nareshnavinash/bonsai/internal/registry"
 	"github.com/nareshnavinash/bonsai/internal/ui"
 )
 
 var psCmd = &cobra.Command{
 	Use:   "ps",
-	Short: "List running models",
+	Short: "Show running server status",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		client, err := getClient()
+		mgr := getServerManager()
+		info, err := mgr.ProcessInfo()
 		if err != nil {
-			return err
-		}
-
-		resp, err := client.ListRunning(context.Background())
-		if err != nil {
-			return fmt.Errorf("cannot list running models: %w", err)
-		}
-
-		if len(resp.Models) == 0 {
-			fmt.Println("No models currently running.")
+			fmt.Println("No server running.")
 			return nil
 		}
 
-		headers := []string{"NAME", "ID", "SIZE", "PROCESSOR", "UNTIL"}
-		rows := make([][]string, len(resp.Models))
-		for i, m := range resp.Models {
-			vramPct := 0
-			if m.Size > 0 {
-				vramPct = int(float64(m.SizeVRAM) / float64(m.Size) * 100)
-			}
-			processor := "100% CPU"
-			if vramPct == 100 {
-				processor = "100% GPU"
-			} else if vramPct > 0 {
-				processor = fmt.Sprintf("%d%% GPU / %d%% CPU", vramPct, 100-vramPct)
-			}
-
-			until := ui.FormatRelativeFuture(m.ExpiresAt)
-			if m.ExpiresAt.Before(time.Now()) {
-				until = "expired"
-			}
-
-			rows[i] = []string{
-				m.Name,
-				ui.TruncateID(m.Digest),
-				ui.FormatBytes(int64(m.Size)),
-				processor,
-				until,
+		modelName := registry.ModelFileName(info.ModelPath)
+		// Try to map filename back to friendly name
+		for _, m := range registry.Models {
+			if m.GGUFFile == modelName {
+				modelName = m.Name
+				break
 			}
 		}
 
+		headers := []string{"PID", "MODEL", "PORT", "UPTIME"}
+		rows := [][]string{{
+			fmt.Sprintf("%d", info.PID),
+			modelName,
+			fmt.Sprintf("%d", info.Port),
+			ui.FormatRelativeTime(info.StartedAt),
+		}}
 		ui.PrintTable(headers, rows)
 		return nil
 	},

@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bonsai - Run 1-bit Bonsai Models via Ollama</title>
-<meta name="description" content="Run prism-ml's 1-bit Bonsai models locally via Ollama. 14x smaller, 4-5x less energy, fast inference on consumer hardware.">
+<title>Bonsai - Run 1-bit Bonsai Models Locally</title>
+<meta name="description" content="Run prism-ml's 1-bit Bonsai models locally with llama.cpp. 14x smaller, 4-5x less energy, fast inference on consumer hardware. No cloud, no API keys.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -87,6 +87,18 @@
   .step-num { flex-shrink: 0; width: 36px; height: 36px; background: var(--accent-dim); border: 1px solid var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: var(--mono); color: var(--accent-light); }
   .step-content h3 { margin-bottom: 8px; }
   .step-content code { display: block; background: var(--bg); padding: 12px 16px; border-radius: 8px; font-family: var(--mono); font-size: 0.85rem; margin-top: 8px; border: 1px solid var(--border); }
+  .step-content .alt { color: var(--text-dim); font-size: 0.85rem; margin-top: 6px; }
+
+  /* Comparison */
+  .comparison { padding: 80px 0; }
+  .comparison-table { max-width: 750px; margin: 0 auto; border-collapse: collapse; width: 100%; }
+  .comparison-table th, .comparison-table td { padding: 14px 20px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  .comparison-table th { color: var(--text-muted); font-weight: 400; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .comparison-table td:first-child { color: var(--text-muted); font-size: 0.85rem; }
+  .comparison-table .val-slow { color: var(--text-dim); }
+  .comparison-table .val-fast { color: var(--accent-light); font-weight: 600; }
+  .comparison-note { max-width: 650px; margin: 24px auto 0; text-align: center; color: var(--text-dim); font-size: 0.85rem; }
+  .comparison-note a { color: var(--accent); }
 
   /* Footer */
   footer { padding: 48px 0; border-top: 1px solid var(--border); text-align: center; }
@@ -114,8 +126,8 @@
     <rect x="54" y="62" width="12" height="12" rx="1" fill="#10b981"/>
   </svg>
   <h1>bonsai</h1>
-  <p class="tagline">Run prism-ml's 1-bit Bonsai models locally via Ollama</p>
-  <p class="subtitle">14x smaller &middot; 4-5x less energy &middot; fast inference</p>
+  <p class="tagline">Run prism-ml's 1-bit Bonsai models locally</p>
+  <p class="subtitle">14x smaller &middot; 4-5x less energy &middot; 56ms response time</p>
   <div class="hero-buttons">
     <a href="#quickstart" class="btn btn-primary">Get Started</a>
     <a href="https://github.com/nareshnavinash/bonsai" class="btn btn-secondary">View on GitHub</a>
@@ -128,8 +140,9 @@
     </div>
     <div class="terminal-body">
       <div><span class="prompt">$ </span><span class="cmd">bonsai pull bonsai-4b</span></div>
-      <div class="output">pulling 3727ef4ac6... 100% [====================] 572 MB</div>
-      <div class="output">success</div>
+      <div class="output">Downloading bonsai-4b (572 MB)...</div>
+      <div class="output">pulling... [====================] 100% 572 MB/572 MB</div>
+      <div class="output">Downloaded bonsai-4b</div>
       <br>
       <div><span class="prompt">$ </span><span class="cmd">bonsai run</span></div>
       <div class="output">Interactive chat with bonsai-4b. Type /bye to exit.</div>
@@ -155,7 +168,7 @@
       <div class="feature-card">
         <span class="feature-icon">&darr;</span>
         <h3>One-Command Pull</h3>
-        <p>Built-in model registry maps shortnames to HuggingFace. Just <code>bonsai pull bonsai-4b</code> -- no URLs to remember.</p>
+        <p>Built-in model registry maps shortnames to HuggingFace. Just <code>bonsai pull bonsai-4b</code> -- downloads directly, no URLs to remember.</p>
       </div>
       <div class="feature-card">
         <span class="feature-icon">>>></span>
@@ -165,7 +178,7 @@
       <div class="feature-card">
         <span class="feature-icon">~/</span>
         <h3>100% Local</h3>
-        <p>Everything runs on your machine via Ollama. No API keys, no telemetry, no cloud dependency.</p>
+        <p>Everything runs on your machine via llama.cpp. No API keys, no telemetry, no cloud dependency.</p>
       </div>
       <div class="feature-card">
         <span class="feature-icon">&lt;1G</span>
@@ -174,10 +187,60 @@
       </div>
       <div class="feature-card">
         <span class="feature-icon">go</span>
-        <h3>Single Binary</h3>
-        <p>~1,200 lines of Go, two dependencies. Install with <code>go install</code> or download a release binary.</p>
+        <h3>Zero Config</h3>
+        <p>Auto-starts the server, manages the process lifecycle, and finds your models. Just <code>bonsai run</code>.</p>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- Why llama.cpp -->
+<section class="comparison">
+  <div class="container">
+    <h2 class="section-title">Why llama.cpp, Not Ollama?</h2>
+    <p class="section-subtitle">Direct inference means faster responses and full control</p>
+    <table class="comparison-table">
+      <thead>
+        <tr><th></th><th>Ollama</th><th>llama.cpp (bonsai v2)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Response time</td>
+          <td class="val-slow">4,585 ms</td>
+          <td class="val-fast">56 ms (78x faster)</td>
+        </tr>
+        <tr>
+          <td>Forced thinking mode</td>
+          <td class="val-slow">Yes -- injects &lt;think&gt; tags</td>
+          <td class="val-fast">No -- clean responses</td>
+        </tr>
+        <tr>
+          <td>Wasted tokens</td>
+          <td class="val-slow">160-265 per response</td>
+          <td class="val-fast">0</td>
+        </tr>
+        <tr>
+          <td>Dependencies</td>
+          <td class="val-slow">Ollama daemon + SDK + 8 deps</td>
+          <td class="val-fast">Single llama-server binary</td>
+        </tr>
+        <tr>
+          <td>Model storage</td>
+          <td class="val-slow">Opaque blob store</td>
+          <td class="val-fast">Plain GGUF files you control</td>
+        </tr>
+        <tr>
+          <td>Template control</td>
+          <td class="val-slow">Locked per model family</td>
+          <td class="val-fast">Full control</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="comparison-note">
+      Ollama's Qwen3 template forces chain-of-thought reasoning on every query, even trivial ones.
+      llama.cpp serves the model directly with no middleware overhead.
+      Want a different backend? Just set <code>BONSAI_HOST</code> to any OpenAI-compatible server.
+    </p>
   </div>
 </section>
 
@@ -257,8 +320,9 @@
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-content">
-          <h3>Install Ollama</h3>
-          <code>curl -fsSL https://ollama.com/install.sh | sh</code>
+          <h3>Install llama.cpp</h3>
+          <code>brew install llama.cpp</code>
+          <p class="alt">Or <a href="https://github.com/ggml-org/llama.cpp#build">build from source</a></p>
         </div>
       </div>
       <div class="step">
@@ -285,9 +349,9 @@
     <div class="footer-links">
       <a href="https://github.com/nareshnavinash/bonsai">GitHub</a>
       <a href="https://huggingface.co/collections/prism-ml/bonsai-6800591046eb822fb3b82541">Models</a>
-      <a href="https://ollama.com">Ollama</a>
+      <a href="https://github.com/ggml-org/llama.cpp">llama.cpp</a>
     </div>
-    <p class="footer-credit">Built with <a href="https://ollama.com">Ollama</a>. Models by <a href="https://huggingface.co/prism-ml">prism-ml</a>. MIT License.</p>
+    <p class="footer-credit">Powered by <a href="https://github.com/ggml-org/llama.cpp">llama.cpp</a>. Models by <a href="https://huggingface.co/prism-ml">prism-ml</a>. MIT License.</p>
   </div>
 </footer>
 

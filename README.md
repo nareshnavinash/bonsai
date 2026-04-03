@@ -4,11 +4,11 @@
 
 # bonsai
 
-**Run prism-ml's 1-bit Bonsai models locally via Ollama.**
+**Run prism-ml's 1-bit Bonsai models locally.**
 
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Ollama](https://img.shields.io/badge/Powered%20by-Ollama-black)](https://ollama.com)
+[![llama.cpp](https://img.shields.io/badge/Powered%20by-llama.cpp-blue)](https://github.com/ggml-org/llama.cpp)
 [![Models by prism-ml](https://img.shields.io/badge/Models-prism--ml%20Bonsai-10b981)](https://huggingface.co/collections/prism-ml/bonsai-6800591046eb822fb3b82541)
 
 [Quick Start](#quick-start) · [Models](#bonsai-models) · [Commands](#commands) · [Configuration](#configuration)
@@ -17,7 +17,7 @@
 
 ---
 
-Bonsai is a CLI that makes it easy to run [prism-ml's Bonsai 1-bit quantized models](https://huggingface.co/collections/prism-ml/bonsai-6800591046eb822fb3b82541) through [Ollama](https://ollama.com). These models are 14x smaller than full-precision equivalents, use 4-5x less energy, and deliver fast inference on consumer hardware -- but Ollama doesn't natively surface them yet. Bonsai bridges that gap with a built-in model registry and a single `pull` command.
+Bonsai is a CLI that makes it easy to run [prism-ml's Bonsai 1-bit quantized models](https://huggingface.co/collections/prism-ml/bonsai-6800591046eb822fb3b82541) locally using [llama.cpp](https://github.com/ggml-org/llama.cpp). These models are 14x smaller than full-precision equivalents, use 4-5x less energy, and deliver fast inference on consumer hardware. Bonsai handles everything -- model downloads from HuggingFace, server lifecycle management, and an OpenAI-compatible API -- with zero configuration.
 
 ## Bonsai Models
 
@@ -35,31 +35,74 @@ The [prism-ml Bonsai models](https://huggingface.co/collections/prism-ml/bonsai-
 - **4-5x lower energy** consumption per token
 - **Fast inference**: 40 tok/s on iPhone, 131 tok/s on M4 Pro, 368 tok/s on RTX 4090
 - **Intelligence density**: 1.06 intelligence/GB vs 0.10 for full precision -- 10x more capability per byte
-- **GGUF format** -- works natively with Ollama
+- **GGUF format** -- runs directly with llama.cpp, no conversion needed
 
 Models by [prism-ml](https://huggingface.co/prism-ml) -- [explore the collection on HuggingFace](https://huggingface.co/collections/prism-ml/bonsai-6800591046eb822fb3b82541).
 
 ## Features
 
-- **Built-in Bonsai registry** -- pull models by shortname (`bonsai pull bonsai-4b`), no need to remember HuggingFace paths
-- **Full model management** -- pull, list, show, run, stop, remove, copy, create
+- **Zero-config inference** -- `bonsai run` auto-starts the server, loads the model, and starts chatting
+- **Built-in Bonsai registry** -- pull models by shortname (`bonsai pull bonsai-4b`), downloads directly from HuggingFace
+- **Full model management** -- pull, list, show, run, stop, remove, copy
 - **Interactive chat** -- multi-turn conversations with streaming output
 - **One-shot prompts** -- `bonsai run bonsai-4b "explain monads"`
 - **Smart model resolution** -- auto-selects the best available Bonsai model
-- **Thinking support** -- handles model reasoning transparently
-- **Progress tracking** -- per-layer download progress bars
-- **Lightweight** -- single binary, ~1,200 LOC, two dependencies
+- **OpenAI-compatible API** -- works with any OpenAI SDK, LangChain, etc.
+- **Server lifecycle management** -- auto-start, PID tracking, health checks
+- **Progress tracking** -- download progress bars
+- **Lightweight** -- single binary, ~1,500 LOC, two dependencies (cobra + uuid)
+- **No Ollama required** -- talks directly to llama.cpp server via OpenAI-compatible API
+
+## Why llama.cpp Instead of Ollama?
+
+Bonsai v1 used [Ollama](https://ollama.com) as its inference backend. We moved to direct [llama.cpp](https://github.com/ggml-org/llama.cpp) integration in v2 for significant performance and control improvements:
+
+| | Ollama | llama.cpp (direct) |
+|---|---|---|
+| **Response time** (simple query) | 4,585 ms | **56 ms** (78x faster) |
+| **Forced thinking mode** | Yes -- Qwen3 template injects `<think>` tags | No -- clean responses |
+| **Wasted tokens** | 160-265 thinking tokens per response | 0 |
+| **Dependencies** | Ollama daemon + Go SDK + 8 transitive deps | Single `llama-server` binary |
+| **Model storage** | Opaque blob store (`~/.ollama/models/blobs/`) | Plain GGUF files you control |
+| **Template control** | Locked to Ollama's per-family templates | Full control, no forced behavior |
+
+### The core problem
+
+The Bonsai models are based on Qwen3. Ollama's Qwen3 chat template unconditionally injects a `<think>` tag at the start of every assistant response:
+
+```
+<|im_start|>assistant
+<think>
+```
+
+This forces the model into chain-of-thought reasoning mode on every single query -- even "What is 2+2?" generates 160-265 internal reasoning tokens before producing the actual answer. This template is baked into Ollama and cannot be overridden per-request.
+
+### What llama.cpp gives us
+
+- **Direct GGUF inference** -- no middleware, no template injection, no abstraction tax
+- **OpenAI-compatible API** -- llama-server exposes `/v1/chat/completions` natively, same protocol any OpenAI SDK speaks
+- **Transparent model files** -- GGUF files in `~/.bonsai/models/` that you can inspect, copy, or share
+- **One fewer dependency** -- no need to install and run a separate Ollama daemon
+- **Full control** -- inference parameters, threading, GPU layers, batch size all configurable
+
+> **Note:** Bonsai still works with any OpenAI-compatible server. If you prefer Ollama, vLLM, or another backend, just point `BONSAI_HOST` at it.
 
 ## Quick Start
 
 ### Prerequisites
 
-[Ollama](https://ollama.com) must be installed and running:
+[llama.cpp](https://github.com/ggml-org/llama.cpp) server must be available:
 
 ```bash
-curl -fsSL https://ollama.com/install.sh | sh
-ollama serve
+# macOS
+brew install llama.cpp
+
+# Or build from source
+git clone https://github.com/ggml-org/llama.cpp && cd llama.cpp
+cmake -B build && cmake --build build -j
 ```
+
+> **Note:** Bonsai auto-detects `llama-server` in your PATH or common locations. You can also set `LLAMA_SERVER_BIN` to point to the binary.
 
 ### Install Bonsai
 
@@ -75,7 +118,7 @@ Or download a binary from [Releases](https://github.com/nareshnavinash/bonsai/re
 # Pull a model (~572 MB)
 bonsai pull bonsai-4b
 
-# Start chatting
+# Start chatting (auto-starts the server)
 bonsai run
 
 # Or one-shot
@@ -87,25 +130,24 @@ bonsai run bonsai-4b "what is quantum computing?"
 | Command | Description |
 |---------|-------------|
 | `bonsai run [model] [prompt]` | Start a chat session or run a one-shot prompt |
-| `bonsai pull <model>` | Download a model (supports bonsai shortnames) |
-| `bonsai list` | List locally available models |
-| `bonsai show <model>` | Show model details (arch, params, quantization) |
-| `bonsai models` | List available Bonsai models from HuggingFace |
-| `bonsai ps` | List currently running/loaded models |
-| `bonsai stop <model>` | Unload a model from memory |
+| `bonsai pull <model>` | Download a model from HuggingFace |
+| `bonsai list` | List installed models |
+| `bonsai show <model>` | Show model details |
+| `bonsai models` | List available Bonsai models |
+| `bonsai ps` | Show running server status |
+| `bonsai stop` | Stop the server |
 | `bonsai rm <model>` | Remove a model |
-| `bonsai cp <src> <dest>` | Copy a model |
-| `bonsai create <name> --from <model>` | Create a model with custom system prompt |
-| `bonsai serve` | Start the Ollama server |
+| `bonsai cp <src> <dest>` | Copy a model file |
+| `bonsai serve [model]` | Start the llama-server (foreground) |
 | `bonsai api` | Start OpenAI-compatible API server |
-| `bonsai status` | Show server status and active model |
+| `bonsai status` | Show server status |
 
 ## API Server
 
 Bonsai can expose an OpenAI-compatible HTTP API, letting any application that speaks the OpenAI format interact with your local Bonsai models.
 
 ```bash
-# Start the API server (Ollama must be running)
+# Start the API server
 bonsai api                    # localhost:8080
 bonsai api --port 3000        # custom port
 bonsai api --host 0.0.0.0    # all interfaces
@@ -146,14 +188,18 @@ Works with LangChain, LlamaIndex, Continue.dev, Cursor, and any OpenAI-compatibl
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `BONSAI_MODEL` | `bonsai-8b` | Preferred model for commands |
-| `OLLAMA_HOST` | `http://localhost:11434` | Ollama server address |
+| `BONSAI_MODEL` | `bonsai-8b` | Preferred model |
+| `BONSAI_HOST` | `http://127.0.0.1:8081` | Server URL |
+| `BONSAI_PORT` | `8081` | Server port |
+| `BONSAI_THREADS` | CPU count | Inference threads |
+| `BONSAI_MODELS_DIR` | `~/.bonsai/models/` | Model storage directory |
+| `LLAMA_SERVER_BIN` | auto-detect | Path to llama-server binary |
 
 ### Model Resolution Order
 
 1. `BONSAI_MODEL` environment variable (if set)
 2. Any locally installed model with "bonsai" in its name
-3. Any locally installed model
+3. Any locally installed GGUF model
 4. Helpful error message with pull instructions
 
 ### Chat Commands
@@ -163,20 +209,28 @@ In interactive mode (`bonsai run`):
 | Command | Description |
 |---------|-------------|
 | `/bye` or `/exit` | Exit the chat |
+| `/clear` | Clear conversation history |
+| `/model <name>` | Switch to a different model |
 | `/set temperature <value>` | Adjust creativity (0.0-2.0) |
 | `/set top_p <value>` | Adjust nucleus sampling |
-| `/set num_ctx <value>` | Adjust context window size |
 | `"""` | Start multi-line input (end with `"""`) |
 
-## Using Other Models
+## Architecture
 
-Bonsai works with any Ollama-compatible model:
-
-```bash
-bonsai pull llama3.2
-bonsai run llama3.2 "explain monads"
-BONSAI_MODEL=mistral bonsai run
 ```
+bonsai run "hello"
+    │
+    ├── Resolve model name → find GGUF file
+    ├── Auto-start llama-server (if not running)
+    ├── Send request via OpenAI-compatible HTTP API
+    └── Stream response tokens to terminal
+```
+
+Bonsai manages the full lifecycle:
+- **Models** stored as GGUF files in `~/.bonsai/models/`
+- **Server** process tracked via PID file at `~/.bonsai/server.pid`
+- **Logs** written to `~/.bonsai/server.log`
+- **Compatible** with any OpenAI-compatible server via `BONSAI_HOST`
 
 ## Contributing
 
@@ -196,5 +250,5 @@ go build -o bonsai .
 ## Acknowledgments
 
 - **[prism-ml](https://huggingface.co/prism-ml)** for the Bonsai 1-bit quantized model family
-- **[Ollama](https://ollama.com)** for the local model runtime
+- **[llama.cpp](https://github.com/ggml-org/llama.cpp)** for the inference engine
 - **[Cobra](https://github.com/spf13/cobra)** for the CLI framework

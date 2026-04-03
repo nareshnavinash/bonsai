@@ -18,7 +18,7 @@ var apiCmd = &cobra.Command{
 	Short: "Start an OpenAI-compatible API server",
 	Long: `Start an HTTP server exposing OpenAI-compatible endpoints.
 
-Requires Ollama to be running (bonsai serve or ollama serve).
+Requires llama-server to be running (bonsai serve or bonsai run).
 
 Endpoints:
   POST /v1/chat/completions   Chat completions (streaming & non-streaming)
@@ -29,12 +29,9 @@ Usage with OpenAI SDK:
   from openai import OpenAI
   client = OpenAI(base_url="http://localhost:8080/v1", api_key="unused")`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		client, err := getClient()
-		if err != nil {
-			return err
-		}
+		client := getLLMClient()
 
-		model, err := ResolveModel(client)
+		model, err := ResolveModel()
 		if err != nil {
 			return err
 		}
