@@ -7,7 +7,7 @@ import (
 	"github.com/ollama/ollama/api"
 	"github.com/spf13/cobra"
 
-	"github.com/nareshsekar/bonsai/internal/ui"
+	"github.com/nareshnavinash/bonsai/internal/ui"
 )
 
 var listCmd = &cobra.Command{

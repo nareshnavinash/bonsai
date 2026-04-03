@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/ollama/ollama/api"
-	"github.com/nareshsekar/bonsai/internal/ui"
+	"github.com/nareshnavinash/bonsai/internal/ui"
 )
 
 func filterArtifacts(s string) string {

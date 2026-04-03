@@ -1,4 +1,4 @@
-module github.com/nareshsekar/bonsai
+module github.com/nareshnavinash/bonsai
 
 go 1.26.1
 

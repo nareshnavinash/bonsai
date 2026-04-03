@@ -3,8 +3,8 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/nareshsekar/bonsai/internal/registry"
-	"github.com/nareshsekar/bonsai/internal/ui"
+	"github.com/nareshnavinash/bonsai/internal/registry"
+	"github.com/nareshnavinash/bonsai/internal/ui"
 )
 
 var modelsCmd = &cobra.Command{

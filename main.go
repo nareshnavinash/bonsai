@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/nareshsekar/bonsai/cmd"
+	"github.com/nareshnavinash/bonsai/cmd"
 )
 
 func main() {

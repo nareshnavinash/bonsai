@@ -7,7 +7,7 @@ import (
 	"github.com/ollama/ollama/api"
 	"github.com/spf13/cobra"
 
-	"github.com/nareshsekar/bonsai/internal/chat"
+	"github.com/nareshnavinash/bonsai/internal/chat"
 )
 
 var runCmd = &cobra.Command{

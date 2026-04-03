@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/ollama/ollama/api"
-	"github.com/nareshsekar/bonsai/internal/chat"
+	"github.com/nareshnavinash/bonsai/internal/chat"
 )
 
 func StreamWithSystemPrompt(client *api.Client, model, systemPrompt, userInput string) error {
