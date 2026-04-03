@@ -24,7 +24,12 @@ var runCmd = &cobra.Command{
 				model = first
 				promptParts = args[1:]
 			} else if len(args) == 1 && len(first) < 30 && !strings.Contains(first, " ") {
-				model = first
+				// Could be a model name or a prompt — try to resolve as model first
+				if _, err := registry.ResolveModelPath(first); err == nil {
+					model = first
+				} else {
+					promptParts = args
+				}
 			} else {
 				promptParts = args
 			}

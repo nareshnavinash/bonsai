@@ -38,7 +38,7 @@ func ScanLocal() ([]LocalModel, error) {
 			continue
 		}
 
-		name := e.Name()
+		name := strings.TrimSuffix(e.Name(), ".gguf")
 		known := false
 		for _, m := range Models {
 			if strings.EqualFold(m.GGUFFile, e.Name()) {

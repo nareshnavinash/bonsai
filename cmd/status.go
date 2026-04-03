@@ -6,7 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/nareshnavinash/bonsai/internal/llm"
 	"github.com/nareshnavinash/bonsai/internal/registry"
 )
 
@@ -17,7 +16,7 @@ var statusCmd = &cobra.Command{
 		mgr := getServerManager()
 		client := getLLMClient()
 
-		host := llm.DefaultBaseURL()
+		host := client.BaseURL
 
 		processRunning := mgr.IsRunning()
 		serverHealthy := client.Health(context.Background()) == nil
